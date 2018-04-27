@@ -24,6 +24,9 @@ class FileWatcher
     @subscriptions.add atom.config.observe 'file-watcher.promptWhenChange',
       (prompt) => @showChangePrompt = prompt
 
+    @subscriptions.add atom.config.observe 'file-watcher.promptEvenWithoutConflicts',
+      (prompt) => @promptEvenWithoutConflicts = prompt
+
     @subscriptions.add atom.config.observe 'file-watcher.includeCompareOption',
       (compare) => @includeCompareOption = compare
 
@@ -73,7 +76,15 @@ class FileWatcher
 
   changeInterceptor: ->
     (log 'Change: ' + @editor.getPath()) if @debug
-    @editor.getBuffer()?.conflict = true if @showChangePrompt
+
+    if @showChangePrompt
+      @editor.getBuffer()?.conflict = true
+
+      if @promptEvenWithoutConflicts
+        active_editor_path = atom.workspace.getActivePaneItem()?.getPath()
+        (log 'Active Editor Path: ' + active_editor_path) if @debug
+
+        @confirmReload() if @editor.getPath() != active_editor_path
 
     # ignore if handled by the non-mounted file system
     @ignoreChange = true if @useFsWatchFile and @showChangePrompt
